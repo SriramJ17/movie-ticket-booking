@@ -1,279 +1,271 @@
-# 📄 Requirement Document
+# DevOps Learning Project – Movie Ticket Booking System
 
-# DevOps‑Focused Movie Ticket Booking System
-
----
-
-## 1. Purpose of This Document
-
-This document defines the **functional, non‑functional, DevOps, security, and cost requirements** for a **learning‑focused movie ticket booking system**.
-
-The goal is **not** to build a feature‑heavy application, but to:
-
-* Practice **real‑world DevOps decision‑making**
-* Understand **why specific AWS services are chosen**
-* Learn **production‑style technical flows**
-* Stay **within (or very close to) AWS Free Tier**
-
-This project is built **from a Senior DevOps perspective**.
+## Requirement Document (Console-First Implementation)
 
 ---
 
-## 2. Project Scope
+## 1. Project Objective
 
-### In Scope
+Build a **learning-focused, DevOps-centric Movie Ticket Booking System** on AWS using a **console-first approach**, followed by Infrastructure as Code (IaC) implementation in **TypeScript (AWS CDK)**.
 
-* Frontend + Backend APIs
-* AWS managed services (no Kubernetes)
-* CI/CD pipelines
-* Infrastructure as Code
-* Observability & SRE concepts
-* Networking & Security fundamentals
-* Cost‑aware architecture
-
-### Out of Scope
-
-* Real payment gateway integration
-* Chaos engineering
-* High‑availability multi‑region setup
+The goal is not feature richness but **deep understanding of real-world DevOps concepts**, AWS service behavior, networking, security, cost control, and operational flows.
 
 ---
 
-## 3. Target Audience & Working Model
+## 2. Target Audience
 
-* **User**: Senior DevOps Engineer
-* **Guidance Role**: Lead DevOps / Platform Engineer (architectural guidance, no full code)
-* **Development Mode**: Solo project
-* **Learning Focus**: High
-
----
-
-## 4. Functional Requirements
-
-### 4.1 User‑Facing Features
-
-1. Browse movies and show timings
-2. View seat availability
-3. Select seats
-4. Lock seats temporarily
-5. Confirm booking (mock payment)
-6. Receive booking confirmation
+* Senior DevOps / Platform Engineer
+* Solo project
+* Learning-by-building approach
 
 ---
 
-### 4.2 Backend Capabilities
+## 3. Core Constraints & Principles
 
-* REST APIs for:
+### 3.1 Implementation Strategy
 
-  * Movies
-  * Shows
-  * Seat availability
-  * Booking
-* Idempotent booking APIs
-* Seat locking with expiry
+* **Phase 1**: Create ALL AWS resources manually via **AWS Console**
+* **Phase 2**: Re-implement the same architecture using **AWS CDK (TypeScript)**
+* No automated imports from console → IaC
+* Console is treated as a **learning sandbox**, not the final state
 
----
+### 3.2 Cost Control (Mandatory)
 
-## 5. Non‑Functional Requirements
-
-### 5.1 Performance
-
-* API latency (p95) < 300 ms (learning target)
-* Seat lock operations must be atomic
-
-### 5.2 Scalability
-
-* Handle traffic spikes during popular releases
-* Stateless services
-
-### 5.3 Availability
-
-* Target availability: 99.9% (conceptual SLO)
+* Project must remain within **AWS Free Tier**
+* No NAT Gateway
+* No paid databases
+* Resources must be **deleted after validation**
+* Billing budget with alerts must be configured
 
 ---
 
-## 6. High‑Level Architecture
+## 4. Technology Stack
 
-### 6.1 AWS Services Used
+### 4.1 Cloud Platform
 
-| Layer         | Service        | Reason for Choice                     |
-| ------------- | -------------- | ------------------------------------- |
-| Frontend      | S3             | Cheap static hosting                  |
-| CDN           | CloudFront     | HTTPS, caching, global edge           |
-| API           | ECS (Fargate)  | Long‑running APIs, deployment control |
-| Async         | Lambda         | Event‑driven, free tier               |
-| Messaging     | SQS            | Decoupling & retries                  |
-| Database      | DynamoDB       | Conditional writes, TTL               |
-| IaC           | AWS CDK        | Type‑safe infra, platform abstraction |
-| CI/CD         | GitHub Actions | Native GitHub integration             |
-| Observability | CloudWatch     | Free tier friendly                    |
+* AWS (single region only)
 
----
+### 4.2 Compute
 
-## 7. Technical Flow (End‑to‑End)
+* Amazon ECS (Fargate)
+* AWS Lambda (later phases)
 
-### 7.1 Frontend Request Flow
+### 4.3 Networking
 
-1. User accesses application URL
-2. DNS routes to CloudFront
-3. CloudFront serves cached assets or fetches from S3
-4. TLS terminates at CloudFront
+* VPC
+* Public & Private Subnets
+* Internet Gateway
+* Application Load Balancer (ALB)
 
----
+### 4.4 Security
 
-### 7.2 API Request Flow
+* Security Groups
+* ACM (TLS certificates)
+* HTTPS termination at ALB
+* IAM roles (least privilege)
 
-1. Browser sends HTTPS request
-2. Request hits Application Load Balancer
-3. ALB forwards traffic to ECS tasks
-4. Container processes request
-5. Response flows back through ALB
+### 4.5 Application
+
+* Dummy application
+* Backend: Node.js (TypeScript)
+* Frontend: Simple static or lightweight UI
 
 ---
 
-### 7.3 Booking Flow
+## 5. Architecture Overview (High Level)
 
-1. Seat selection request
-2. DynamoDB conditional write locks seat
-3. Booking event sent to SQS
-4. Lambda handles expiry / cleanup
-5. Booking confirmation returned
+```
+User Browser
+  → TCP
+  → TLS (HTTPS)
+  → Application Load Balancer
+  → Target Group
+  → ECS Fargate Task
+  → Application Response
+```
 
----
-
-## 8. DevOps Requirements
-
-### 8.1 CI/CD
-
-* GitHub Actions pipelines
-* Stages:
-
-  1. Lint & test (TypeScript)
-  2. Build Docker image
-  3. Push to ECR
-  4. Deploy using CDK
+TLS terminates at the ALB. Backend traffic remains HTTP.
 
 ---
 
-### 8.2 Deployment Strategy
+## 6. Phase 1 – Console-Only Implementation Requirements
 
-* Blue/Green deployments for ECS
-* Zero‑downtime deployments
+### 6.1 AWS Account Safety Setup
+
+**Mandatory before any resource creation**:
+
+* Create AWS Budget
+
+  * Monthly limit: $5
+  * Alert at $1
+* Choose a **single AWS region** and never change it
 
 ---
 
-### 8.3 Infrastructure as Code
+### 6.2 Networking Requirements
 
-* AWS CDK (TypeScript)
+Create via AWS Console:
+
+* One VPC
+* Two Public Subnets (multi-AZ)
+* Two Private Subnets (multi-AZ)
+* Internet Gateway
+* Route Tables
+
+Constraints:
+
+* No NAT Gateway
+* Only public subnets have IGW routes
+
+Learning Focus:
+
+* Route table behavior
+* Subnet exposure
+* Traffic flow understanding
+
+---
+
+### 6.3 Security Groups
+
+Create the following security groups manually:
+
+#### ALB Security Group
+
+* Inbound: HTTPS (443) from 0.0.0.0/0
+* Outbound: All
+
+#### ECS Security Group
+
+* Inbound: Application port (e.g. 3000) from ALB Security Group only
+* Outbound: All
+
+#### Database Security Group (Future)
+
+* No inbound rules initially
+
+Learning Focus:
+
+* Trust boundaries
+* Principle of least privilege
+
+---
+
+### 6.4 TLS & Certificates
+
+* Use AWS Certificate Manager (ACM)
+* DNS validation
+* Attach certificate to ALB HTTPS listener
+
+Key Concepts Covered:
+
+* TLS handshake
+* Certificate lifecycle
+* HTTPS termination at ALB
+
+---
+
+### 6.5 Application Load Balancer
+
+Create:
+
+* Internet-facing ALB
+* Public subnets
+* HTTPS listener (443)
+* Attach ACM certificate
+
+Notes:
+
+* Expect 503 until backend is attached
+* Do not create target group initially
+
+---
+
+### 6.6 ECS (Minimal Setup)
+
+Create:
+
+* ECS Cluster (Fargate)
+* Task Definition
+
+  * Single container (nginx or simple Node app)
+  * Exposed port
+* ECS Service
+
+  * Desired count: 1
+  * Attach to ALB target group
+
+Learning Focus:
+
+* Task vs Service
+* Target group registration
+* Security group enforcement
+
+---
+
+### 6.7 Validation & Testing
+
+Validate:
+
+* ALB DNS works
+* HTTPS certificate is valid
+* Traffic reaches ECS task
+
+Manually trace traffic flow end-to-end.
+
+---
+
+### 6.8 Cleanup (Mandatory)
+
+After validation, delete:
+
+* ECS Service
+* ECS Cluster
+* ALB
+* Target Groups
+
+Do not leave billable resources running.
+
+---
+
+## 7. Phase 2 – Infrastructure as Code (Future)
+
+After console learning:
+
+* Rebuild entire architecture using AWS CDK (TypeScript)
 * Separate stacks:
 
-  * Network
-  * Compute
-  * Data
-  * Observability
+  * NetworkStack
+  * SecurityStack
+  * ComputeStack
+  * AppStack
+* No console dependency
 
 ---
 
-## 9. Observability & SRE Requirements
+## 8. DevOps Topics Explicitly Covered
 
-### 9.1 Metrics
-
-* API latency (p95)
-* Error rate
-* Booking success rate
-
-### 9.2 Logs
-
-* Structured application logs
-* Centralized in CloudWatch
-
-### 9.3 SRE Concepts
-
-* SLIs: latency, availability
-* SLOs: conceptual only
-* Error budgets: theoretical discussion
+* TCP vs HTTP vs HTTPS
+* TLS & certificates
+* Load balancing
+* Network isolation
+* IAM & security groups
+* Cost management
+* Blue/green foundations (later)
+* Observability (later)
 
 ---
 
-## 10. Security Requirements
+## 9. Definition of Success
 
-### 10.1 Networking Fundamentals
-
-* TCP 3‑way handshake understanding
-* HTTP vs HTTPS
-* HTTP/1.1 vs HTTP/2
-
----
-
-### 10.2 TLS & Certificates
-
-* AWS ACM managed certificates
-* TLS termination at:
-
-  * CloudFront
-  * Application Load Balancer
-* Understanding TLS handshake & cert chain
+* Ability to explain **why** each AWS service is used
+* Ability to trace request flow without diagrams
+* Zero unexpected AWS charges
+* Clean IaC recreation after console phase
 
 ---
 
-### 10.3 AWS Security
+## 10. Current Project Status
 
-* IAM least privilege
-* Task role vs execution role
-* Secrets Manager for sensitive values
-* Basic WAF rules
-
----
-
-## 11. Cost Requirements (Critical)
-
-### 11.1 Cost Philosophy
-
-* Learning project must remain **free or near‑zero cost**
-* Avoid always‑on services
-* Infrastructure must be destroyed after use
-
----
-
-### 11.2 Free‑Tier Strategy
-
-| Service    | Cost Expectation    |
-| ---------- | ------------------- |
-| S3         | Free tier           |
-| CloudFront | Near zero           |
-| Lambda     | Free tier           |
-| DynamoDB   | Free tier           |
-| SQS        | Free tier           |
-| ECS        | Minimal, time‑boxed |
-| ALB        | Main cost risk      |
-
----
-
-### 11.3 Cost Controls
-
-* Deploy only during testing
-* `cdk destroy` after use
-* Avoid RDS initially
-* Consider API Gateway + Lambda if needed
-
----
-
-## 12. Final Deliverables
-
-1. GitHub repository
-2. Deployed demo URL (temporary)
-3. Architecture diagrams
-4. This requirement document
-
----
-
-## 13. Living Document Note
-
-This requirement document is **intentionally iterative**.
-As learning progresses:
-
-* Sections may be refined
-* Architecture decisions may change
-* Trade‑offs will be documented
-
-This mirrors **real‑world engineering design evolution**.
+* Documentation: ✅ Completed
+* NetworkStack (initial): ✅ Created
+* Console-first build: 🔄 In Progress
